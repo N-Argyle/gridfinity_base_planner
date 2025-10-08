@@ -1,3 +1,5 @@
+import type { MaterialSettings } from "./index";
+
 export interface GridfinityConfig {
   dimensions: {
     width: number;
@@ -6,14 +8,7 @@ export interface GridfinityConfig {
     maxGridY: number;
   };
   measurementUnit: "mm" | "inches";
-  materialSettings: {
-    finish: "matte" | "semi-gloss" | "glossy";
-    useRandomColors: boolean;
-    selectedColors: string[];
-    planeColor: string;
-    environment?: string;
-    backgroundStyle: "simple" | "environment" | "gradient";
-  };
+  materialSettings: MaterialSettings;
   modelPlacements: {
     modelId: string;
     instanceId: string;

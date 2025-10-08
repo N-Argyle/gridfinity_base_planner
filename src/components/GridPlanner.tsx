@@ -10,18 +10,51 @@ import {
   gridDimensionsAtom,
   placedGridsAtom,
   freeSpacesAtom,
+  materialSettingsAtom,
 } from "~/atoms/grid";
-import { formDimensionsAtom } from "~/atoms/form";
+import { formDimensionsAtom, measurementUnitAtom } from "~/atoms/form";
+import { selectedModelsAtom, availableModelsAtom } from "~/atoms/models";
 import { GridSummary } from "./GridSummary";
 import { InfoIcon } from "lucide-react";
 import { Alert, AlertTitle, AlertDescription } from "~/components/ui/alert";
 import { ModelSelector } from "./ModelSelector";
+import { decodeConfigFromURL, importConfig } from "~/lib/config";
 
 export default function GridPlanner() {
   const [, setGridDimensions] = useAtom(gridDimensionsAtom);
   const [placedGrids, setPlacedGrids] = useAtom(placedGridsAtom);
   const [, setFreeSpaces] = useAtom(freeSpacesAtom);
-  const [formDimensions] = useAtom(formDimensionsAtom);
+  const [formDimensions, setFormDimensions] = useAtom(formDimensionsAtom);
+  const [, setMaterialSettings] = useAtom(materialSettingsAtom);
+  const [, setMeasurementUnit] = useAtom(measurementUnitAtom);
+  const [, setSelectedModels] = useAtom(selectedModelsAtom);
+  const [availableModels] = useAtom(availableModelsAtom);
+
+  // Load config from URL on component mount
+  useEffect(() => {
+    const loadConfigFromURL = async () => {
+      const configJson = decodeConfigFromURL();
+      if (!configJson) return;
+
+      try {
+        const { config, models } = await importConfig(configJson, availableModels);
+        
+        setFormDimensions(config.dimensions);
+        setMeasurementUnit(config.measurementUnit);
+        setMaterialSettings(config.materialSettings);
+        setSelectedModels(models);
+
+        // Clean up URL after loading
+        const url = new URL(window.location.href);
+        url.searchParams.delete('config');
+        window.history.replaceState({}, '', url.toString());
+      } catch (error) {
+        console.error("Error loading config from URL:", error);
+      }
+    };
+
+    void loadConfigFromURL();
+  }, [availableModels, setFormDimensions, setMeasurementUnit, setMaterialSettings, setSelectedModels]);
 
   useEffect(() => {
     const { width, height, maxGridX, maxGridY } = formDimensions;

@@ -84,3 +84,50 @@ export async function importConfig(
     models: models as GridfinityModel[],
   };
 }
+
+// URL sharing utilities
+export function encodeConfigToURL({
+  dimensions,
+  measurementUnit,
+  materialSettings,
+  selectedModels,
+}: {
+  dimensions: GridfinityConfig["dimensions"];
+  measurementUnit: GridfinityConfig["measurementUnit"];
+  materialSettings: GridfinityConfig["materialSettings"];
+  selectedModels: GridfinityModel[];
+}): string {
+  const configJson = exportConfig({
+    dimensions,
+    measurementUnit,
+    materialSettings,
+    selectedModels,
+  });
+  
+  // Compress the JSON string for shorter URLs
+  const compressed = btoa(encodeURIComponent(configJson));
+  
+  const url = new URL(window.location.href);
+  url.searchParams.set('config', compressed);
+  
+  return url.toString();
+}
+
+export function decodeConfigFromURL(): string | null {
+  if (typeof window === 'undefined') return null;
+  
+  const url = new URL(window.location.href);
+  const compressed = url.searchParams.get('config');
+  
+  if (!compressed) return null;
+  
+  try {
+    const configJson = decodeURIComponent(atob(compressed));
+    // Validate that it's valid JSON before returning
+    JSON.parse(configJson);
+    return configJson;
+  } catch (error) {
+    console.warn('Failed to decode config from URL:', error);
+    return null;
+  }
+}

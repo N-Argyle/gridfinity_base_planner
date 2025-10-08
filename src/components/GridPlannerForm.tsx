@@ -1,6 +1,7 @@
 "use client";
 
 import { useAtom } from "jotai";
+import { useState } from "react";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { formDimensionsAtom, measurementUnitAtom } from "~/atoms/form";
@@ -8,9 +9,9 @@ import { Switch } from "~/components/ui/switch";
 import { X } from "lucide-react";
 import { materialSettingsAtom } from "~/atoms/grid";
 import { selectedModelsAtom, availableModelsAtom } from "~/atoms/models";
-import { exportConfig, importConfig } from "~/lib/config";
+import { exportConfig, importConfig, encodeConfigToURL } from "~/lib/config";
 import { Button } from "~/components/ui/button";
-import { Download, Upload } from "lucide-react";
+import { Download, Upload, Link, Copy } from "lucide-react";
 import { Separator } from "~/components/ui/separator";
 
 const MM_PER_INCH = 25.4;
@@ -21,6 +22,7 @@ export default function GridPlannerForm() {
   const [materialSettings] = useAtom(materialSettingsAtom);
   const [selectedModels, setSelectedModels] = useAtom(selectedModelsAtom);
   const [availableModels] = useAtom(availableModelsAtom);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,6 +71,46 @@ export default function GridPlannerForm() {
     } catch (error) {
       console.error("Error importing configuration:", error);
       alert("Failed to import configuration. Please check the file format.");
+    }
+  };
+
+  const handleGenerateLink = async () => {
+    try {
+      const shareURL = encodeConfigToURL({
+        dimensions,
+        measurementUnit: unit,
+        materialSettings,
+        selectedModels,
+      });
+
+      await navigator.clipboard.writeText(shareURL);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 3000);
+    } catch (error) {
+      console.error("Error generating link:", error);
+      // Fallback for browsers that don't support clipboard API
+      try {
+        const shareURL = encodeConfigToURL({
+          dimensions,
+          measurementUnit: unit,
+          materialSettings,
+          selectedModels,
+        });
+        
+        // Create a temporary text area to select and copy the URL
+        const textArea = document.createElement('textarea');
+        textArea.value = shareURL;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        setLinkCopied(true);
+        setTimeout(() => setLinkCopied(false), 3000);
+      } catch (fallbackError) {
+        console.error("Fallback copy failed:", fallbackError);
+        alert("Failed to generate sharing link. Please try again.");
+      }
     }
   };
 
@@ -182,34 +224,67 @@ export default function GridPlannerForm() {
         </div>
       </form>
       <Separator className="my-4" />
-      <div className="flex items-center justify-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleExport}
-          className="flex items-center gap-2"
-        >
-          <Download className="h-4 w-4" />
-          Export Config
-        </Button>
-        <label className="cursor-pointer">
+      <div className="space-y-3">
+        <div className="text-center">
+          <h3 className="text-sm font-medium text-gray-900 mb-2">Configuration Management</h3>
+          <p className="text-xs text-gray-600 mb-3">
+            Save, share, and load your gridfinity configurations
+          </p>
+        </div>
+        <div className="flex items-center justify-center gap-2 flex-wrap">
           <Button
             variant="outline"
             size="sm"
+            onClick={handleExport}
             className="flex items-center gap-2"
-            onClick={() => document.getElementById("config-import")?.click()}
           >
-            <Upload className="h-4 w-4" />
-            Import Config
+            <Download className="h-4 w-4" />
+            Export Config
           </Button>
-          <input
-            id="config-import"
-            type="file"
-            accept=".json"
-            className="hidden"
-            onChange={handleImport}
-          />
-        </label>
+          <label className="cursor-pointer">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+              onClick={() => document.getElementById("config-import")?.click()}
+            >
+              <Upload className="h-4 w-4" />
+              Import Config
+            </Button>
+            <input
+              id="config-import"
+              type="file"
+              accept=".json"
+              className="hidden"
+              onChange={handleImport}
+            />
+          </label>
+          <Button
+            variant={linkCopied ? "default" : "outline"}
+            size="sm"
+            onClick={handleGenerateLink}
+            className={`flex items-center gap-2 transition-colors ${
+              linkCopied ? "bg-green-600 hover:bg-green-700" : ""
+            }`}
+          >
+            {linkCopied ? (
+              <>
+                <Copy className="h-4 w-4" />
+                Link Copied!
+              </>
+            ) : (
+              <>
+                <Link className="h-4 w-4" />
+                Generate Link
+              </>
+            )}
+          </Button>
+        </div>
+        {linkCopied && (
+          <p className="text-xs text-green-600 text-center">
+            Share this link to let others view your configuration instantly!
+          </p>
+        )}
       </div>
     </div>
   );
